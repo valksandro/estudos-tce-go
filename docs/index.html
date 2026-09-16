@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="description" content="Controle de estudo e revisões para o edital do TCE-GO." />
+    <title>Estudos TCE-GO</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container topbar-content">
+        <p class="eyebrow">Plano de estudo</p>
+        <h1>Estudos TCE-GO</h1>
+        <p class="subtitle">Marque o que estudou e registre cada revisão.</p>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="overview" aria-labelledby="overview-title">
+        <div class="overview-heading">
+          <p class="eyebrow">Seu avanço</p>
+          <h2 id="overview-title">Edital organizado por tópicos</h2>
+          <p id="progress-summary" class="summary" aria-live="polite"></p>
+        </div>
+        <div id="stats" class="stats" aria-label="Resumo do progresso"></div>
+      </section>
+
+      <section class="controls" aria-label="Filtrar tópicos">
+        <div class="field search-field">
+          <label for="search">Buscar no edital</label>
+          <input id="search" type="search" placeholder="Ex.: Docker, crase, LGPD" autocomplete="off" />
+        </div>
+        <div class="field filter-field">
+          <label for="status-filter">Mostrar</label>
+          <select id="status-filter">
+            <option value="all">Todos os tópicos</option>
+            <option value="pending">Somente pendentes</option>
+            <option value="done">Somente estudados</option>
+            <option value="reviewed">Com revisões</option>
+          </select>
+        </div>
+        <button id="clear-progress" class="button button-secondary" type="button">Limpar progresso</button>
+      </section>
+
+      <p id="notice" class="notice" role="status" aria-live="polite">Seu progresso fica salvo neste navegador.</p>
+      <section id="subjects" class="subjects" aria-label="Conteúdo do edital"></section>
+    </main>
+
+    <footer class="container footer">
+      Dados locais: este painel não envia seu histórico para um servidor.
+    </footer>
+  </body>
+</html>
