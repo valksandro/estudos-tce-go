@@ -288,6 +288,7 @@ function progressFor(topicId) {
   return {
     studied: Boolean(saved?.studied),
     revisions: Number.isInteger(saved?.revisions) && saved.revisions > 0 ? saved.revisions : 0,
+    questions: Number.isInteger(saved?.questions) && saved.questions > 0 ? saved.questions : 0,
     studiedAt: saved?.studiedAt || null,
     revisedAt: saved?.revisedAt || null
   };
@@ -319,7 +320,8 @@ function visible(topic, subject) {
   const matchesStatus = status === 'all'
     || (status === 'pending' && !topicProgress.studied)
     || (status === 'done' && topicProgress.studied)
-    || (status === 'reviewed' && topicProgress.revisions > 0);
+    || (status === 'reviewed' && topicProgress.revisions > 0)
+    || (status === 'questions' && topicProgress.questions > 0);
   return matchesSearch && matchesStatus;
 }
 
@@ -329,6 +331,7 @@ function subjectStats(subject) {
   return {
     studied,
     revisions: items.reduce((sum, item) => sum + item.revisions, 0),
+    questions: items.reduce((sum, item) => sum + item.questions, 0),
     total: items.length,
     percentage: Math.round((studied / items.length) * 100)
   };
@@ -337,12 +340,14 @@ function subjectStats(subject) {
 function renderStats() {
   const completed = allTopics.filter((topic) => progressFor(topic.id).studied).length;
   const revisions = allTopics.reduce((sum, topic) => sum + progressFor(topic.id).revisions, 0);
+  const questions = allTopics.reduce((sum, topic) => sum + progressFor(topic.id).questions, 0);
   const pending = allTopics.length - completed;
   const percentage = Math.round((completed / allTopics.length) * 100);
   progressSummaryElement.textContent = `${completed} de ${allTopics.length} tópicos concluídos (${percentage}%).`;
   statsElement.innerHTML = [
     ['Estudados', completed],
     ['Revisões', revisions],
+    ['Questões feitas', questions],
     ['Pendentes', pending],
     ['Progresso', `${percentage}%`]
   ].map(([label, value]) => `
@@ -376,6 +381,12 @@ function topicTemplate(topic) {
         <button class="button button-primary" type="button" data-action="revise" data-topic-id="${topic.id}">+ 1 revisão</button>
         <span class="revision-count">${topicProgress.revisions} ${topicProgress.revisions === 1 ? 'revisão' : 'revisões'}</span>
         <button class="button button-undo" type="button" data-action="undo" data-topic-id="${topic.id}" ${topicProgress.revisions === 0 ? 'disabled' : ''}>Desfazer revisão</button>
+        <form class="questions" data-topic-id="${topic.id}">
+          <input class="questions-input" type="number" step="1" inputmode="numeric" name="amount" placeholder="0"
+            aria-label="Somar questões feitas em ${escapeHtml(topic.title)}" />
+          <button class="button button-add" type="submit">Somar questões</button>
+        </form>
+        <span class="questions-count">${topicProgress.questions} ${topicProgress.questions === 1 ? 'questão feita' : 'questões feitas'}</span>
         <p class="last-activity">${activityText(topicProgress)}</p>
       </div>
     </article>
@@ -395,7 +406,7 @@ function renderSubjects() {
           <div class="subject-summary">
             <div>
               <h2 class="subject-title">${escapeHtml(subject.name)}</h2>
-              <span class="subject-meta">${stats.studied}/${stats.total} estudados · ${stats.revisions} revisões</span>
+              <span class="subject-meta">${stats.studied}/${stats.total} estudados · ${stats.revisions} revisões · ${stats.questions} questões</span>
             </div>
             <span class="subject-arrow" aria-hidden="true">⌄</span>
           </div>
@@ -437,8 +448,8 @@ subjectsElement.addEventListener('change', (event) => {
       announce('Tópico marcado como estudado.');
       return { ...current, studied: true, studiedAt: current.studiedAt || now() };
     }
-    announce('Tópico marcado como pendente e revisões removidas.');
-    return { studied: false, revisions: 0, studiedAt: null, revisedAt: null };
+    announce('Tópico marcado como pendente e revisões removidas. Questões feitas mantidas.');
+    return { ...current, studied: false, revisions: 0, studiedAt: null, revisedAt: null };
   });
 });
 
@@ -469,6 +480,23 @@ subjectsElement.addEventListener('click', (event) => {
   }
 });
 
+subjectsElement.addEventListener('submit', (event) => {
+  const form = event.target.closest('form.questions');
+  if (!form) return;
+  event.preventDefault();
+  const topicId = form.dataset.topicId;
+  if (!topicById.has(topicId)) return;
+
+  const amount = Math.trunc(Number(form.elements.amount.value));
+  if (!amount) return;
+
+  updateTopic(topicId, (current) => {
+    const questions = Math.max(0, current.questions + amount);
+    announce(`Tópico com ${questions} ${questions === 1 ? 'questão feita' : 'questões feitas'}.`);
+    return { ...current, questions };
+  });
+});
+
 subjectsElement.addEventListener('toggle', (event) => {
   const details = event.target;
   if (!details.matches('.subject')) return;
@@ -480,7 +508,7 @@ searchElement.addEventListener('input', renderSubjects);
 statusFilterElement.addEventListener('change', renderSubjects);
 
 document.querySelector('#clear-progress').addEventListener('click', () => {
-  if (!window.confirm('Limpar todos os tópicos estudados e todas as revisões?')) return;
+  if (!window.confirm('Limpar todos os tópicos estudados, todas as revisões e todas as questões feitas?')) return;
   progress = {};
   saveProgress();
   announce('Progresso limpo.');
